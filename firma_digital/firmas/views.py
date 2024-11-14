@@ -16,7 +16,7 @@ from django.shortcuts import render, HttpResponse
 def generar_hash_documento(documento):
     """Generar un hash SHA-256 del archivo PDF"""
     hash_sha256 = hashlib.sha256()    
-   # hash_sha256 = hashlib.sha256()
+   
  
     for chunk in documento.chunks():
         hash_sha256.update(chunk)
@@ -50,7 +50,7 @@ def firmar_documento(request):
            # hash_documento_Firmado = generar_hash_documento(documento_firmado+'application/pdf')
             # Guardar la firma en la base de datos
             firma = Firma(usuario=user, documento=nombre_documento, firma_valida=True, fecha_firma=timezone.now(),coordenada_x=x,
-                coordenada_y=y,hash_documento=documento_firmado)
+                coordenada_y=y,hash_documento=hash_documento)
             firma.save()
             
             # Preparar el archivo para la descarga
