@@ -1,0 +1,151 @@
+{% load static %}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+
+<link href="button.css" rel="stylesheet" type="text/css">
+
+<form method="POST" enctype="multipart/form-data">
+    {% csrf_token %}
+    <div class="div" type ="margin-top: 10%"  >
+        <label for="username">Usuario:</label>
+        <input type="text" name="username" required><br>
+
+        <label for="password">Contraseña:</label>
+        <input type="password" name="password" required><br>
+
+        <label for="documento">Subir Documento PDF:</label><br>
+        <input class="btn-secondary" type="file" id="pdf_file" name="documento" accept="application/pdf" required><br>
+
+        <input id="posicion_x" name="posicion_x" readonly required>
+        <input id="posicion_y" name="posicion_y" readonly required>
+        <div id="pdf_container"></div><br>
+        <div id="error-alert" class="alert alert-danger d-none" role="alert"></div>
+        <div id="success-alert" class="alert alert-success d-none" role="alert"></div>
+        <button class="btn-primary" type="submit">Firmar Documento</button>
+    </div>
+</form>
+
+<!-- Contenedor para todas las páginas del PDF -->
+<canvas id="pdf_canvas"></canvas>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.5.207/pdf.min.js"></script>
+
+<script>
+    const fileInput = document.getElementById('pdf_file');
+    const pdfContainer = document.getElementById('pdf_container');
+    let pdfDoc = null;
+    // Obtener el canvas y su contexto
+    const pdfCanvas = document.getElementById('pdf_canvas');
+    const ctx = pdfCanvas.getContext('2d');
+
+    const form = document.querySelector('form');
+    //const posXInput = document.getElementById('posicion_x');
+   // const posYInput = document.getElementById('posicion_y');
+   
+    form.addEventListener('submit', function(event) {
+        const posX = document.getElementById('posicion_x').value;
+        const posY = document.getElementById('posicion_y').value;
+        const errorAlert = document.getElementById('error-alert');
+        const success = document.getElementById('success-alert');
+        //if (!posXInput.value || !posYInput.value) {
+          if (posX==0 || posY==0){
+              // Evita que el formulario se envíe
+              event.preventDefault();
+           // alert("Debes seleccionar las coordenadas para firmar el documento.");
+            errorAlert.textContent = "Debes seleccionar las coordenadas para firmar el documento.";
+            errorAlert.classList.remove('d-none');
+            
+        }else{
+            success.textContent = "Se ha firmado el documento correctamente.";
+            errorAlert.classList.add('d-none');
+            success.classList.remove('d-none');
+        }
+    });
+
+    // Función para renderizar todo el PDF
+    function renderPDF(pdfData) {
+        const loadingTask = pdfjsLib.getDocument(pdfData);
+        loadingTask.promise.then(function(pdf) {
+            pdfDoc = pdf;
+
+            // Limpiar el contenedor antes de renderizar
+            pdfContainer.innerHTML = '';
+
+            // Renderizar todas las páginas
+            for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+                renderPage(pageNum);
+            }
+        });
+    }
+    
+    function drawXOnCanvas(x, y) {
+        // Definir el tamaño de la "X"
+        const size = 10;
+    
+        // Dibujar la línea de izquierda a derecha
+        ctx.beginPath();
+        ctx.moveTo(x - size, y - size); // Parte superior izquierda
+        ctx.lineTo(x + size, y + size); // Parte inferior derecha
+        ctx.strokeStyle = 'red'; // Color de la "X"
+        ctx.lineWidth = 2;
+        ctx.stroke();
+    
+        // Dibujar la línea de derecha a izquierda
+        ctx.beginPath();
+        ctx.moveTo(x + size, y - size); // Parte superior derecha
+        ctx.lineTo(x - size, y + size); // Parte inferior izquierda
+        ctx.strokeStyle = 'red';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+    }
+    // Función para renderizar una sola página
+    function renderPage(num) {
+        pdfDoc.getPage(num).then(function(page) {
+            const viewport = page.getViewport({ scale: 1 });
+
+            // Crear un nuevo canvas para cada página
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+
+            // Añadir el canvas al contenedor
+            pdfContainer.appendChild(canvas);
+
+            // Renderizar la página
+            const renderContext = {
+                canvasContext: ctx,
+                viewport: viewport
+            };
+            page.render(renderContext);
+            
+            // Agregar un evento de clic a cada página renderizada
+            canvas.addEventListener('click', function(event) {
+                const rect = canvas.getBoundingClientRect();
+                const x = event.clientX - rect.left;
+                const y = event.clientY - rect.top;
+
+                document.getElementById('posicion_x').value = Math.round(x);
+                document.getElementById('posicion_y').value = Math.round(canvas.height - y);
+            // Dibujar una "X" en las coordenadas seleccionadas
+                drawXOnCanvas(x, y);
+            });
+        });
+        
+    }
+
+    // Evento para cargar y mostrar el PDF
+    fileInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file.type === 'application/pdf') {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                renderPDF(new Uint8Array(event.target.result));
+            };
+            reader.readAsArrayBuffer(file);
+        } else {
+            alert('Por favor, selecciona un archivo PDF.');
+        }
+        
+    });
+</script>

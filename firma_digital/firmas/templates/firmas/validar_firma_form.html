@@ -1,0 +1,19 @@
+{% load static %}
+
+<!-- templates/firmas/validar_firma_form.html -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Validar Firma del Documento</title>
+</head>
+<body>
+    <h1>Validar Firma del Documento</h1>
+    <form action="{% url 'validar_firma_documento' %}" method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <label for="documento">Seleccionar documento PDF:</label>
+        <input type="file" name="documento" accept="application/pdf" required>
+        <button type="submit">Validar Firma</button>
+    </form>
+</body>
+</html>
